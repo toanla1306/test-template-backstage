@@ -1,0 +1,103 @@
+name: Deploy Infrastructure
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'infrastructure/**'
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET }}
+  REGION: ${{ vars.REGION }}
+
+jobs:
+  git2s3:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/cloudformation
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Deploy CloudFormation stack
+      run: |
+        aws cloudformation deploy \
+          --template-file git2s3.yaml \
+          --stack-name git2s3-${{ vars.NAME_APPLICATION }} \
+          --parameter-overrides file://parameters.json \
+          --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
+
+    - name: Get Value Git Pull Web Hook API
+      run: |
+        GitPullWebhookAPI=$(aws cloudformation describe-stacks \
+          --stack-name git2s3-${{ vars.NAME_APPLICATION }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`GitPullWebHookApi`].OutputValue' \
+          --output text)
+        
+        echo "GitPullWebhookAPI=$GitPullWebhookAPI" >> $GITHUB_ENV
+
+    - name: Get Public SSH Key
+      run: |
+        aws cloudformation describe-stacks \
+          --stack-name git2s3-${{ vars.NAME_APPLICATION }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`PublicSSHKey`].OutputValue' \
+          --output text > PublicSSHKey.pub
+
+    - name: Bucket Git2S3
+      run: |
+        aws cloudformation describe-stacks \
+          --stack-name git2s3-${{ vars.NAME_APPLICATION }} \
+          --query 'Stacks[0].Outputs[?OutputKey==`OutputBucketName`].OutputValue' \
+          --output text > name_bucket_output
+
+    - name: Upload Name of Bucket Git2s3 to file
+      uses: actions/upload-artifact@v2
+      with:
+        name: env-artifact
+        path: name_bucket_output
+
+    - name: Authenticate with GitHub CLI
+      run: gh auth login --with-token <<< ${{ secrets.GIT_ACCESS_TOKEN }}
+
+    - name: Add public key to repository
+      run: gh repo deploy-key add PublicSSHKey.pub --title "Git2S3-${{vars.NAME_APPLICATION}}"
+
+    - name: Add Webhook in Github
+      run: |
+        gh api /repos/${{ vars.REPOSITORY_SLUG }}/hooks \
+         --input - <<< '{ 
+            "config": {
+              "url": "$GitPullWebhookAPI",
+              "secret": "test123"
+              "content_type": "json"
+            }
+          }'
+        
+
+  deploy_codepipeline:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: infrastructure/terraform
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v1
+      with:
+        terraform_version: 0.14.7
+
+    - name: Initialization Terraform
+      run: terraform init
+    
+    - name: Validate Terraform configuration
+      run: terraform validate
+
+    - name: Deploy Terraform
+      run: terraform apply -auto-approve

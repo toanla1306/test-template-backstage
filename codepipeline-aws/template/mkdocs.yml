@@ -1,0 +1,10 @@
+site_name: ${{ values.name}}
+site_description: Document of ${{ values.name }} Application
+
+nav:
+  - 'Introduction': index.md
+  - 'Infrastructure': infrastructure.md
+  - 'How to Use Application': guide.md
+
+plugins:
+  - techdocs-core
