@@ -43,7 +43,7 @@ jobs:
           --stack-name git2s3-${{ vars.NAME_APPLICATION }} \
           --query 'Stacks[0].Outputs[?OutputKey==`GitPullWebHookApi`].OutputValue' \
           --output text)
-        
+                 
         echo "GitPullWebhookAPI=$GitPullWebhookAPI" >> $GITHUB_ENV
 
     - name: Get Public SSH Key
@@ -55,16 +55,22 @@ jobs:
 
     - name: Bucket Git2S3
       run: |
-        aws cloudformation describe-stacks \
+        Bucket_Git=$(aws cloudformation describe-stacks \
           --stack-name git2s3-${{ vars.NAME_APPLICATION }} \
           --query 'Stacks[0].Outputs[?OutputKey==`OutputBucketName`].OutputValue' \
-          --output text > name_bucket_output
+          --output text)
+
+        echo "S3BucketName=$Bucket_Git" 
+        echo "S3BucketName=$Bucket_Git" > terraform.tfvars
+        Object_Bucket=$(echo "${{ vars.REPOSITORY_SLUG }}" | sed 's/\//\_/')
+        echo "S3ObjectKey=${{ vars.REPOSITORY_SLUG }}/master/$Object_Bucket.zip" 
+        echo "S3ObjectKey=${{ vars.REPOSITORY_SLUG }}/master/$Object_Bucket.zip" >> terraform.tfvars
 
     - name: Upload Name of Bucket Git2s3 to file
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v3
       with:
         name: env-artifact
-        path: name_bucket_output
+        path: ${{ github.workspace }}/cloudformation/terraform.tfvars
 
     - name: Authenticate with GitHub CLI
       run: gh auth login --with-token <<< ${{ secrets.GIT_ACCESS_TOKEN }}
@@ -85,7 +91,7 @@ jobs:
         
 
   deploy_codepipeline:
-    need: git2s3
+    needs: git2s3
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -100,11 +106,21 @@ jobs:
       with:
         terraform_version: 0.14.7
 
+    - name: Download environment variable file
+      uses: actions/download-artifact@v3
+      with:
+        name: env-artifact
+
     - name: Initialization Terraform
       run: terraform init
     
     - name: Validate Terraform configuration
       run: terraform validate
 
+    - name: Plan Terraform
+      run: |
+        mv ${{ github.workspace }}/terraform.tfvars .
+        terraform plan -var-file terraform.tfvars
+
     - name: Deploy Terraform
-      run: terraform apply -auto-approve
+      run: terraform apply -auto-approve 

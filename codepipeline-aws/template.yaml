@@ -2,7 +2,7 @@ apiVersion: scaffolder.backstage.io/v1beta3
 # https://backstage.io/docs/features/software-catalog/descriptor-format#kind-template
 kind: Template
 metadata:
-  name: example-nodejs-template
+  name: Node-Application-Template
   title: Example Node.js Template
   description: An example template for the scaffolder that creates a simple Node.js service
 spec:
@@ -17,6 +17,7 @@ spec:
         - name
         - account_id
         - region
+        - bucket_docs
       properties:
         name:
           title: Name
@@ -35,6 +36,10 @@ spec:
             rows: 5
 
         region:
+          title: Region in AWS
+          type: string
+
+        bucket_docs:
           title: Region in AWS
           type: string
         
@@ -93,6 +98,7 @@ spec:
           NAME_APPLICATION: ${{ parameters.name }}
           REGION: ${{ parameters.region }}
           REPOSITORY_SLUG: ${{ parameters.repoUrl | projectSlug }}
+          BUCKET_NAME: ${{ parameters.bucket_docs }}
         secrets:
           AWS_ID: ${{ parameters.aws_id }}
           AWS_SECRET: ${{ parameters.aws_secret }}
