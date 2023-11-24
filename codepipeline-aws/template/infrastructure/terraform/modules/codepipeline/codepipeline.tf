@@ -51,19 +51,16 @@ resource "aws_codepipeline" "my_codepipeline" {
   #   name = "Deploy"
 
   #   action {
-  #     name             = "DeployAction"
-  #     category         = "Deploy"
-  #     owner            = "AWS"
-  #     provider         = "ECS"
-  #     version          = "1"
-  #     input_artifacts  = ["BuildOutput"]
+  #     name            = "Deploy"
+  #     category        = "Deploy"
+  #     owner           = "AWS"
+  #     provider        = "CodeDeploy"
+  #     input_artifacts = ["BuildOutput"]
+  #     version         = "1"
 
   #     configuration = {
-  #       ClusterName        = aws_ecs_cluster.my_cluster.name
-  #       ServiceName        = "my-ecs-service"  # Replace with your ECS service name
-  #       FileName           = "imagedefinitions.json"
-  #       Image1ArtifactName = "BuildOutput::image1"
-  #       Image2ArtifactName = "BuildOutput::image2"
+  #       ApplicationName     = var.application_name
+  #       DeploymentGroupName = var.deployment_group_name
   #     }
   #   }
   # }
@@ -86,4 +83,52 @@ resource "aws_iam_role" "codepipeline_role" {
   ]
 }
 EOF
+}
+
+resource "aws_iam_policy" "codepipeline_policy" {
+  name = "CodePipelinePolicy"
+
+  policy = jsonencode(
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetResourcePolicy",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecretVersionIds",
+        "secretsmanager:ListSecrets"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "codebuild:CreateReportGroup",
+        "codebuild:CreateReport",
+        "codebuild:UpdateReport",
+        "codebuild:BatchPutTestCases",
+        "codebuild:BatchPutCodeCoverages"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [ "ecr:*" ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [ "s3:*" ],
+      "Resource": "*"
+    }
+  ]
+})
+}
+
+resource "aws_iam_role_policy_attachment" "codepipeline_policy_attachment" {
+  policy_arn = aws_iam_policy.codepipeline_policy.arn
+  role       = aws_iam_role.codepipeline_role.name
 }

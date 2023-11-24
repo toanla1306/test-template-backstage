@@ -22,6 +22,12 @@ jobs:
     steps:
     - name: Checkout Repository
       uses: actions/checkout@v2
+    
+    - name: Configure AWS credentials
+      run: |
+        aws configure set aws_access_key_id ${{ secrets.AWS_ID }}
+        aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET }}
+        aws configure set region ${{ vars.REGION }}  # Change this to your AWS region
 
     - name: Deploy CloudFormation stack
       run: |
@@ -72,13 +78,14 @@ jobs:
          --input - <<< '{ 
             "config": {
               "url": "$GitPullWebhookAPI",
-              "secret": "test123"
+              "secret": "test123",
               "content_type": "json"
             }
           }'
         
 
   deploy_codepipeline:
+    need: git2s3
     runs-on: ubuntu-latest
     defaults:
       run:
