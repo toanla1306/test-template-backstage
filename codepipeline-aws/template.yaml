@@ -3,7 +3,7 @@ apiVersion: scaffolder.backstage.io/v1beta3
 kind: Template
 metadata:
   name: Node-Application-Template
-  title: Example Node.js Template
+  title: Node Application Template
   description: An example template for the scaffolder that creates a simple Node.js service
 spec:
   owner: user:guest
@@ -40,7 +40,7 @@ spec:
           type: string
 
         bucket_docs:
-          title: Region in AWS
+          title: Bucket Store Docs
           type: string
         
     - title: Choose a location
