@@ -1,0 +1,10 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: test-template-backstage
+  annotations:
+    github.com/project-slug: toanla1306/test-template-backstage
+spec:
+  type: other
+  lifecycle: unknown
+  owner: guest
