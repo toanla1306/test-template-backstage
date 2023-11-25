@@ -60,17 +60,20 @@ jobs:
           --query 'Stacks[0].Outputs[?OutputKey==`OutputBucketName`].OutputValue' \
           --output text)
 
-        echo "S3BucketName=$Bucket_Git" 
-        echo "S3BucketName=$Bucket_Git" > terraform.tfvars
+        echo "S3BucketName='$Bucket_Git'" | tr \' \" 
+        echo "S3BucketName='$Bucket_Git'" | tr \' \" > terraform.tfvars
         Object_Bucket=$(echo "${{ vars.REPOSITORY_SLUG }}" | sed 's/\//\_/')
-        echo "S3ObjectKey=${{ vars.REPOSITORY_SLUG }}/master/$Object_Bucket.zip" 
-        echo "S3ObjectKey=${{ vars.REPOSITORY_SLUG }}/master/$Object_Bucket.zip" >> terraform.tfvars
+        echo "S3ObjectKey='${{ vars.REPOSITORY_SLUG }}/master/$Object_Bucket.zip'" | tr \' \" 
+        echo "S3ObjectKey='${{ vars.REPOSITORY_SLUG }}/master/$Object_Bucket.zip'" | tr \' \" >> terraform.tfvars
+        ls -las
+        pwd
 
     - name: Upload Name of Bucket Git2s3 to file
       uses: actions/upload-artifact@v3
       with:
         name: env-artifact
-        path: ${{ github.workspace }}/cloudformation/terraform.tfvars
+        path: ${{ github.workspace }}/infrastructure/cloudformation/terraform.tfvars
+        if-no-files-found: error
 
     - name: Authenticate with GitHub CLI
       run: gh auth login --with-token <<< ${{ secrets.GIT_ACCESS_TOKEN }}
@@ -83,8 +86,8 @@ jobs:
         gh api /repos/${{ vars.REPOSITORY_SLUG }}/hooks \
          --input - <<< '{ 
             "config": {
-              "url": "$GitPullWebhookAPI",
-              "secret": "test123",
+              "url": "${{ env.GitPullWebhookAPI }}",
+              "secret": "test456",
               "content_type": "json"
             }
           }'

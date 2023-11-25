@@ -1,13 +1,13 @@
 terraform {
    backend "s3" {
      bucket = "demo-project-toanla"
-     key    = "app-second/terraform.tfstate"
-     region = "us-east-1"
+     key    = "${{ values.name }}/terraform.tfstate"
+     region = "${{ values.region }}"
    }
  }
 
  provider "aws" {
-   region = "us-east-1"
+   region = "${{ values.region }}"
 
    default_tags {
      tags = local.tags
